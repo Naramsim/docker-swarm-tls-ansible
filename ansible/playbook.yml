@@ -1,0 +1,13 @@
+- hosts: all
+  become: true
+  roles:
+    - pip
+    - docker
+
+# - hosts: manager
+#   roles:
+#     - swarm-manager
+
+# - hosts: worker
+#   roles:
+#     - swarm-worker

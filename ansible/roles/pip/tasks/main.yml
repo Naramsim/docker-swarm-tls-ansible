@@ -1,0 +1,6 @@
+- name: Install pip
+  package:
+    name:
+      - epel-release
+      - python-pip
+    state: present
