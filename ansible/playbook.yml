@@ -5,10 +5,12 @@
     - disk
     - docker
 
-# - hosts: manager
-#   roles:
-#     - swarm-manager
+- hosts: manager
+  become: true
+  roles:
+    - swarm-manager
 
-# - hosts: worker
-#   roles:
-#     - swarm-worker
+- hosts: worker
+  become: true
+  roles:
+    - swarm-worker
