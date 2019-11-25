@@ -46,12 +46,26 @@
     state: started
     enabled: true
 
-- name: Change and apply dockerd settings
-  replace:
-    dest: /lib/systemd/system/docker.service
-    regexp: '^ExecStart=/usr/bin/dockerd -H fd:// (--containerd=/run/containerd/containerd.sock)?'
-    replace: 'ExecStart=/usr/bin/dockerd --data-root /mnt/docker --icc=false --live-restore --no-new-privileges -H fd:// --containerd=/run/containerd/containerd.sock'
+- name: Create docker.service.d
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Change and apply dockerd settings # TODO: secure APIs -H tcp://0.0.0.0:2375
+  copy:
+    src: files/override.conf
+    dest: /etc/systemd/system/docker.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
   register: dockerd
+
+- name: Force systemd to reread configs
+  systemd:
+    daemon_reload: yes
 
 - name: Restart Docker service
   service:
