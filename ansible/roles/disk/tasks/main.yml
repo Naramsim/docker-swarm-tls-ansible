@@ -1,0 +1,23 @@
+- name: Check if disk exists
+  shell: "file -sL /dev/disk/by-id/google-{{ disk_name }}"
+  register: disk_exists
+
+- name: Format disk # https://cloud.google.com/compute/docs/disks/add-persistent-disk
+  shell: "mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/disk/by-id/google-{{ disk_name }}"
+  when: "'UUID=' not in disk_exists.stdout"
+
+- name: Create mount directory
+  file:
+    dest: "/mnt/docker/"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Mount drive
+  mount:
+    path: "/mnt/docker/"
+    src: "/dev/disk/by-id/google-{{ disk_name }}"
+    fstype: ext4
+    opts: discard,defaults
+    state: mounted
