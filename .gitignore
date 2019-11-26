@@ -1,2 +1,4 @@
 client-certificates/*
 !.gitkeep
+secrets/*
+!secrets/*.sample

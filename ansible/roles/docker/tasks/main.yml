@@ -1,6 +1,6 @@
 - name: Ensure that /mnt/docker has at least 10GB free
-  shell: "[ $(df -k --output=size,target | grep /mnt/docker | awk '{print $1}') -gt 9437184 ]"
-
+  shell: "[ $(df -k --output=size,target | grep '/mnt/docker$' | awk '{print $1}') -gt 9437184 ]"
+    
 - name: Install docker pip module
   pip:
     name:
@@ -54,7 +54,7 @@
     group: root
     mode: 0755
 
-- name: Change and apply dockerd settings # TODO: secure APIs -H tcp://0.0.0.0:2375
+- name: Change and apply dockerd settings
   copy:
     src: files/override.conf
     dest: /etc/systemd/system/docker.service.d/override.conf

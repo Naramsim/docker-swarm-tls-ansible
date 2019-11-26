@@ -1,0 +1,254 @@
+- name: Generate client certs
+  block:
+    - name: Create directory to store intermediate results of certificate generation process
+      file:
+        state: directory
+        path: /tmp/certificates
+      tags:
+        - certificate
+
+    - name: Reset passphrase file
+      file:
+        state: absent
+        path: /tmp/certificates/passphrase.txt
+      tags:
+        - certificate
+
+    - name: Create passphrase file
+      file:
+        state: touch
+        path: /tmp/certificates/passphrase.txt
+      tags:
+        - certificate
+
+    - name: Add passphrase to the file
+      lineinfile:
+        dest: /tmp/certificates/passphrase.txt
+        line: "{{ lookup('file', '/playground/secrets/docker-tls.password') }}"
+      tags:
+        - certificate
+
+    - name: Generate CA's private key
+      command: openssl genrsa -aes256 -passout file:/tmp/certificates/passphrase.txt -out /tmp/certificates/ca-key.pem 4096
+      tags:
+        - certificate
+
+    - name: Set CA's private key permissions
+      file:
+        path: /tmp/certificates/ca-key.pem
+        mode: 0400
+      tags:
+        - certificate
+
+    - name: Get public IP
+      ipify_facts:
+      retries: 3
+      delay: 3
+      register: ipifyResult
+      until: ipifyResult is success
+      tags:
+        - ipify
+        - certificate
+
+    - name: Display public IP
+      debug: msg="{{ ipify_public_ip | default('127.0.0.1') }}"
+      tags:
+        - ipify
+        - certificate
+
+    - name: Generate CA certificate
+      command: "openssl req -new -x509 -days 365 -key /tmp/certificates/ca-key.pem -sha256 -out /tmp/certificates/ca.pem -passin file:/tmp/certificates/passphrase.txt -subj '/C=IT/ST=TTA>/L=Calliano/O=MyOwn/CN={{ ipify_public_ip }}'"
+      tags:
+        - certificate
+
+    - name: Set CA certificate permissions
+      file:
+        path: /tmp/certificates/ca.pem
+        mode: 0444
+      tags:
+        - certificate
+
+    - name: Create server key
+      command: openssl genrsa -out /tmp/certificates/server-key.pem 4096
+      tags:
+        - certificate
+
+    - name: Create server CSR
+      command: "openssl req -subj '/CN={{ ipify_public_ip }}' -sha256 -new -key /tmp/certificates/server-key.pem -out /tmp/certificates/server.csr"
+      tags:
+        - certificate
+
+    - name: Reset extfile
+      file:
+        state: absent
+        path: /tmp/certificates/extfile.cnf
+      tags:
+        - certificate
+
+    - name: Create extfile
+      file:
+        state: touch 
+        path: /tmp/certificates/extfile.cnf
+      tags:
+        - certificate
+
+    - name: Add public IP to altNames of extfile
+      lineinfile:
+        dest: /tmp/certificates/extfile.cnf
+        line: "subjectAltName = IP:{{ ipify_public_ip }},IP:127.0.0.1"
+      tags:
+        - certificate
+
+    - name: Sign server certificate with CA
+      command: openssl x509 -req -days 365 -sha256 -in /tmp/certificates/server.csr -CA /tmp/certificates/ca.pem -CAkey /tmp/certificates/ca-key.pem -CAcreateserial -out /tmp/certificates/server-cert.pem -extfile /tmp/certificates/extfile.cnf -passin file:/tmp/certificates/passphrase.txt
+      tags:
+        - certificate
+
+    - name: Check server cert's path exists
+      file:
+        state: directory
+        path: /etc/docker
+      tags:
+        - certificate
+
+    - name: Copy server certs
+      command: cp "/tmp/certificates/{{ item }}" /etc/docker/
+      with_items:
+        - ca.pem
+        - server-cert.pem
+        - server-key.pem
+      register: serverCertificates
+      tags:
+        - certificate
+
+    - name: Set file permissions for server's private key
+      file:
+        path: /etc/docker/server-key.pem
+        mode: 0400
+      tags:
+        - certificate
+
+    - name: Set file permissions for server's certificates
+      file:
+        path: "/etc/docker/{{ item }}"
+        mode: 0444
+      with_items:
+        - ca.pem
+        - server-cert.pem
+      tags:
+        - certificate
+
+- name: Generate client certs
+  block:
+    - name: Create client key
+      command: openssl genrsa -out /tmp/certificates/key.pem 4096
+      tags:
+        - certificate
+
+    - name: Create client CSR 
+      command: openssl req -subj '/CN=client' -new -key /tmp/certificates/key.pem -out /tmp/certificates/client.csr
+      tags:
+        - certificate
+
+    - name: Remove extfile
+      file:
+        state: absent
+        path: /tmp/certificates/extfile.cnf
+      tags:
+        - certificate
+
+    - name: Create extfile
+      file:
+        state: touch
+        path: /tmp/certificates/extfile.cnf
+      tags:
+        - certificate
+
+    - name: Add extendedKeyUsage to extfile
+      lineinfile:
+        dest: /tmp/certificates/extfile.cnf
+        line: extendedKeyUsage = clientAuth
+      tags:
+        - certificate
+
+    - name: Create the client certificate 
+      command: openssl x509 -req -days 365 -sha256 -in /tmp/certificates/client.csr -CA /tmp/certificates/ca.pem -CAkey /tmp/certificates/ca-key.pem -CAcreateserial -out /tmp/certificates/cert.pem -extfile /tmp/certificates/extfile.cnf -passin file:/tmp/certificates/passphrase.txt
+      tags:
+        - certificate
+
+    - name: Check that the client cert path exists
+      file:
+        state: directory
+        path: /tmp/certificates/client
+      tags:
+        - certificate
+
+    - name: Copy client certs
+      command: cp "/tmp/certificates/{{ item }}" /tmp/certificates/client/
+      with_items:
+        - ca.pem
+        - cert.pem
+        - key.pem
+      tags:
+        - certificate
+
+    - name: Set file permissions for keys
+      file:
+        path: /tmp/certificates/client/key.pem
+        mode: 0400
+      tags:
+        - certificate
+
+    - name: Set file permissions for certificates 
+      file:
+        path: "/tmp/certificates/client/{{ item }}"
+        mode: 0444
+      with_items:
+        - ca.pem
+        - cert.pem
+      tags:
+        - certificate
+
+    - name: Specifying a destination path
+      fetch:
+        src: "/tmp/certificates/client/{{ item }}"
+        dest: /playground/client-certificates/
+        flat: yes
+      with_items:
+        - ca.pem
+        - cert.pem
+        - key.pem
+      tags:
+        - certificate
+
+    - name: Remove the temp directory
+      tags:
+        - certificate
+      file:
+        state: absent
+        path: /tmp/certificates
+
+- name: Change and apply dockerd settings # Cannot use daemon.json - See: https://docs.docker.com/install/linux/linux-postinstall/#control-where-the-docker-daemon-listens-for-connections
+  copy:
+    src: files/override.conf
+    dest: /etc/systemd/system/docker.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: dockerd
+  tags:
+    - certificate
+
+- name: Force systemd to reread configs
+  systemd:
+    daemon_reload: yes
+  tags:
+    - certificate
+
+- name: Restart Docker service
+  service:
+    state: restarted
+    name: docker
+  when: (dockerd.changed) or (serverCertificates.changed)
+  tags:
+    - certificate
