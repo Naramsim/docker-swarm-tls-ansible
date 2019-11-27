@@ -35,8 +35,8 @@
 - name: Install Docker
   package:
     name:
-      - docker-ce
-      - docker-ce-cli
+      - docker-ce-docker-ce-19.03.5
+      - docker-ce-cli-docker-ce-19.03.5
       - containerd.io
     state: present
 
