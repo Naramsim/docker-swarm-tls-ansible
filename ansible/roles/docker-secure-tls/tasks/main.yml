@@ -87,7 +87,7 @@
 
     - name: Create extfile
       file:
-        state: touch 
+        state: touch
         path: /tmp/certificates/extfile.cnf
       tags:
         - certificate
@@ -145,7 +145,7 @@
       tags:
         - certificate
 
-    - name: Create client CSR 
+    - name: Create client CSR
       command: openssl req -subj '/CN=client' -new -key /tmp/certificates/key.pem -out /tmp/certificates/client.csr
       tags:
         - certificate
@@ -171,7 +171,7 @@
       tags:
         - certificate
 
-    - name: Create the client certificate 
+    - name: Create the client certificate
       command: openssl x509 -req -days 365 -sha256 -in /tmp/certificates/client.csr -CA /tmp/certificates/ca.pem -CAkey /tmp/certificates/ca-key.pem -CAcreateserial -out /tmp/certificates/cert.pem -extfile /tmp/certificates/extfile.cnf -passin file:/tmp/certificates/passphrase.txt
       tags:
         - certificate
@@ -199,7 +199,7 @@
       tags:
         - certificate
 
-    - name: Set file permissions for certificates 
+    - name: Set file permissions for certificates
       file:
         path: "/tmp/certificates/client/{{ item }}"
         mode: 0444

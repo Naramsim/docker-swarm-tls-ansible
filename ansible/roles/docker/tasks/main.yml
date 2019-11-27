@@ -1,6 +1,6 @@
-- name: Ensure that /mnt/docker has at least 10GB free
+- name: Ensure that /mnt/docker has at least 10GB free # noqa 301 306
   shell: "[ $(df -k --output=size,target | grep '/mnt/docker$' | awk '{print $1}') -gt 9437184 ]"
-    
+
 - name: Install docker pip module
   pip:
     name:
@@ -30,7 +30,7 @@
 - name: Add Docker repository
   shell: yum-config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
   args:
-    creates: /etc/yum.repos.d/docker-ce.repo 
+    creates: /etc/yum.repos.d/docker-ce.repo
 
 - name: Install Docker
   package:

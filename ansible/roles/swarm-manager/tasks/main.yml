@@ -2,6 +2,7 @@
   shell: docker node ls
   register: swarm_status
   ignore_errors: true
+  changed_when: false
   tags: swarm
 
 - name: Initialize Docker Swarm
@@ -13,4 +14,5 @@
 - name: Get worker's join-token
   shell: docker swarm join-token --quiet worker
   register: worker_token
+  changed_when: false
   tags: swarm

@@ -1,7 +1,8 @@
 - name: Check if node is already registered in a swarm
-  shell: '[ "$(docker info --format {% raw %}{{.Swarm.LocalNodeState}}{% endraw %})" = "active" ]'
+  shell: '[ "$(docker info --format {% raw %}{{.Swarm.LocalNodeState}}{% endraw %})" = "active" ]' # noqa 206
   register: is_active
   ignore_errors: true
+  changed_when: false
   tags: swarm
 
 - name: Add worker to swarm

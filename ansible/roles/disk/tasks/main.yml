@@ -1,6 +1,7 @@
 - name: Check if disk exists
   shell: "file -sL /dev/disk/by-id/google-{{ disk_name }}"
   register: disk_exists
+  changed_when: false
 
 - name: Format disk # https://cloud.google.com/compute/docs/disks/add-persistent-disk
   shell: "mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/disk/by-id/google-{{ disk_name }}"
